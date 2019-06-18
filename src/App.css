@@ -1,0 +1,15 @@
+.main {
+    max-width: 350px;
+    margin: auto;
+    margin-top: 50px;
+}
+
+.posts {
+    margin: auto;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 10px;
+}
