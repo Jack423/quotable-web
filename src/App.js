@@ -1,82 +1,60 @@
-import React, { Component } from 'react';
-import { app } from './config/firebaseConfig';
-import { Route, Switch, Redirect } from 'react-router-dom';
-import Navigation from './components/Navigation/Navigation';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
+import jwtDecode from 'jwt-decode';
+// Redux
+import { Provider } from 'react-redux';
+import store from './redux/store';
+import { SET_AUTHENTICATED } from './redux/types';
+import { logoutProfile, getProfileData } from './redux/actions/profileActions';
+// Components
 
-import ContextUser from './contextUser';
-import Home from './views/home/Home'
-import Login from './components/Auth/Login'
+// Pages
+import DashboardContainer from './containers/dashboardContainer';
+import LoginContainer from './containers/loginContainer';
+import RegisterContainer from './containers/registerContainer';
 
-class App extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            username: null,
-            uid: null,
-            authenticated: false,
-            loading: true
-        }
+import axios from 'axios';
+
+const theme = createMuiTheme({
+  palette: {
+    primary: {
+      main: '#009688',
+    },
+    secondary: {
+      main: '#f50057'
     }
+  }
+});
 
-    componentWillMount = () => {
-        app.auth().onAuthStateChanged(authUser => {
-            if(authUser) {
-                this.setState({
-                    uid: authUser.uid,
-                    authenticated: true,
-                    loading: false
-                });
-            } else {
-                this.setState({
-                    user: null,
-                    authenticated: false,
-                    loading: false,
-                    uid: null
-                });
-            }
-        });
-    }
-
-    // callback for updating auth
-    updateAuth = (bool) => {
-        //this.setState({authenticated: bool});
-    }
-
-    updateUsername = (user) => {
-        //this.setState({username: user});
-    }
-
-    updateAuthUsername = (bool, user, uid) => {
-        this.setState({
-            authenticated: bool,
-            user: user,
-            uid: uid
-        });
-    }
-
-    render() {
-        const { authenticated, uid, loading } = this.state;
-
-        if (loading) {
-            return null;
-        }
-
-        return(
-                <ContextUser.Provider value={{
-                    state: { authenticated: authenticated },
-                    actions: { updateUsername: this.updateUsername, updateAuth: this.updateAuth, updateAuthUsername: this.updateAuthUsername }
-                }}>
-                    <Navigation />
-                    
-                    <Switch>
-                        <Route path="/login" render={() => (authenticated ? <Redirect to="/" /> : <Login />)} exact/>
-                        <Route path="/home" render={()=> <Home /> } exact/>
-                    </Switch>
-                    
-                </ContextUser.Provider>
-        );
-    }
+const token = localStorage.FBIdToken;
+if (token) {
+  const decodedToken = jwtDecode(token);
+  if (decodedToken.exp * 1000 < Date.now()) {
+    store.dispatch(logoutProfile());
+    window.location.href = '/login';
+  } else {
+    store.dispatch({ type: SET_AUTHENTICATED });
+    axios.defaults.headers.common['Authorization'] = token;
+    store.dispatch(getProfileData());
+  }
 }
 
-export default App 
+function App() {
+  return (
+    <MuiThemeProvider theme={theme}>
+      <Provider store={store}>
+        <Router>
+          <Switch>
+            <Route exact path="/" component={DashboardContainer} />
+            <Route path="/login" component={LoginContainer} />
+            <Route path="/register" component={RegisterContainer} />
+          </Switch>
+        </Router>
+      </Provider>
+    </MuiThemeProvider>
+  );
+}
+
+export default App;
